@@ -1,0 +1,96 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:11.4-alpine
+    environment:
+      - POSTGRES_USER=
+      - POSTGRES_PASSWORD=
+      - POSTGRES_DB=college_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  canteen:
+    build:
+      context: ./microservices/canteen
+      dockerfile: Dockerfile
+    image: canteen
+    entrypoint: python3.6 manage.py runserver
+    command: --host 0.0.0.0 --port 8002
+    env_file:
+      - './microservices/canteen/.env'
+    ports:
+      - "8002:8002"
+    expose:
+      - "8002"
+
+  secretariat:
+    build:
+      context: ./microservices/secretariat
+      dockerfile: Dockerfile
+    image: secretariat
+    entrypoint: python3.6 manage.py runserver
+    command: --host 0.0.0.0 --port 8004
+    env_file:
+      - './microservices/secretariat/.env'
+    environment:
+      - DATABASE_URL=postgres://josecorreia@docker.for.mac.localhost:5432/
+    ports:
+      - "8004:8004"
+    depends_on: 
+      - postgres
+    expose:
+      - "8004"
+
+  rooms:
+    build:
+      context: ./microservices/rooms
+      dockerfile: Dockerfile
+    image: rooms
+    entrypoint: python3.6 manage.py runserver
+    command: --host 0.0.0.0 --port 8003
+    env_file:
+      - './microservices/rooms/.env'
+    ports:
+      - "8003:8003"
+    expose:
+      - "8003"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: backend
+    entrypoint: python3.6 manage.py runserver
+    command: --host 0.0.0.0 --port 8005
+    env_file:
+      - './backend/.env'
+    ports:
+      - "8005:8005"
+    depends_on: 
+      - canteen
+      - rooms
+      - secretariat
+    expose:
+    - "8005"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    image: client
+    entrypoint: python3.6 manage.py runserver
+    command: --host 0.0.0.0 --port 8006
+    env_file:
+      - './client/.env'
+    ports:
+      - "8006:8006"
+    depends_on: 
+      - backend
+    expose:
+      - "8006"
+
+volumes:
+  db_data:
+
